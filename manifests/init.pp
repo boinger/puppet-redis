@@ -40,8 +40,6 @@ class redis (
   $redis_bin_dir = $redis::params::redis_bin_dir
 ) inherits redis::params {
 
-  package { ["wget", "gcc"]: ensure => installed; }
-
   $redis_pkg_name = "redis-${version}.tar.gz"
   $redis_pkg = "${redis_src_dir}/${redis_pkg_name}"
 
@@ -85,7 +83,7 @@ class redis (
     'get-redis-pkg':
       command => "/usr/bin/wget --output-document ${redis_pkg} http://redis.googlecode.com/files/${redis_pkg_name}",
       unless  => "/usr/bin/test -f ${redis_pkg}",
-      require => File[$redis_src_dir];
+      require => [Package['wget'], File[$redis_src_dir]];
 
     'unpack-redis':
       command => "tar --strip-components 1 -xzf ${redis_pkg}",
@@ -99,7 +97,7 @@ class redis (
       cwd     => $redis_src_dir,
       path    => '/bin:/usr/bin',
       unless  => "test $(${redis_bin_dir}/bin/redis-server --version | cut -d ' ' -f 1) = 'Redis'",
-      require => [ Exec['unpack-redis'], Class['gcc'] ],
+      require => [ Exec['unpack-redis'], Package['gcc'], Package['make'] ],
   }
 
 }
