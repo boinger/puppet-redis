@@ -96,23 +96,23 @@ define redis::instance (
     }
   }
 
-  file { "redis-lib-port-${redis_port}":
-    ensure => directory,
-    path   => "/var/lib/redis/${redis_port}",
-  }
+  file {
+    "redis-lib-port-${redis_port}":
+      ensure => directory,
+      path   => "/var/lib/redis/${redis_port}";
 
-  file { "redis-init-${redis_port}":
-    ensure  => present,
-    path    => "/etc/init.d/redis_${redis_port}",
-    mode    => '0755',
-    content => template('redis/redis.init.erb'),
-    notify  => Service["redis-${redis_port}"],
-  }
-  file { "redis_port_${redis_port}.conf":
-    ensure  => present,
-    path    => "/etc/redis/${redis_port}.conf",
-    mode    => '0644',
-    content => template('redis/redis_port.conf.erb'),
+    "redis-init-${redis_port}":
+      ensure  => present,
+      path    => "/etc/init.d/redis_${redis_port}",
+      mode    => '0755',
+      content => template('redis/redis.init.erb'),
+      notify  => Service["redis-${redis_port}"];
+    
+    "redis_port_${redis_port}.conf":
+      ensure  => present,
+      path    => "/etc/redis/${redis_port}.conf",
+      mode    => '0644',
+      content => template('redis/redis_port.conf.erb');
   }
 
   service { "redis-${redis_port}":

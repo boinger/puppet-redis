@@ -40,8 +40,7 @@ class redis (
   $redis_bin_dir = $redis::params::redis_bin_dir
 ) inherits redis::params {
 
-  include wget
-  include gcc
+  package { ["wget", "gcc"]: ensure => installed; }
 
   $redis_pkg_name = "redis-${version}.tar.gz"
   $redis_pkg = "${redis_src_dir}/${redis_pkg_name}"
@@ -53,15 +52,22 @@ class redis (
     owner => root,
     group => root,
   }
-  file { $redis_src_dir:
-    ensure => directory,
-  }
-  file { '/etc/redis':
-    ensure => directory,
-  }
-  file { 'redis-lib':
-    ensure => directory,
-    path   => '/var/lib/redis',
+  
+  file {
+    $redis_src_dir:
+      ensure => directory;
+ 
+    '/etc/redis':
+      ensure => directory;
+
+    'redis-lib':
+      ensure => directory,
+      path   => '/var/lib/redis';
+
+    'redis-cli-link':
+      ensure => link,
+      path   => '/usr/local/bin/redis-cli',
+      target => "${redis_bin_dir}/bin/redis-cli";
   }
 
   # If the version is 2.4.13, use the tarball that ships with the
@@ -74,30 +80,26 @@ class redis (
       source => 'puppet:///modules/redis/redis-2.4.13.tar.gz',
     }
   }
-  exec { 'get-redis-pkg':
-    command => "/usr/bin/wget --output-document ${redis_pkg} http://redis.googlecode.com/files/${redis_pkg_name}",
-    unless  => "/usr/bin/test -f ${redis_pkg}",
-    require => File[$redis_src_dir],
-  }
 
-  file { 'redis-cli-link':
-    ensure => link,
-    path   => '/usr/local/bin/redis-cli',
-    target => "${redis_bin_dir}/bin/redis-cli",
-  }
-  exec { 'unpack-redis':
-    command => "tar --strip-components 1 -xzf ${redis_pkg}",
-    cwd     => $redis_src_dir,
-    path    => '/bin:/usr/bin',
-    unless  => "test -f ${redis_src_dir}/Makefile",
-    require => Exec['get-redis-pkg'],
-  }
-  exec { 'install-redis':
-    command => "make && make install PREFIX=${redis_bin_dir}",
-    cwd     => $redis_src_dir,
-    path    => '/bin:/usr/bin',
-    unless  => "test $(${redis_bin_dir}/bin/redis-server --version | cut -d ' ' -f 1) = 'Redis'",
-    require => [ Exec['unpack-redis'], Class['gcc'] ],
+  exec {
+    'get-redis-pkg':
+      command => "/usr/bin/wget --output-document ${redis_pkg} http://redis.googlecode.com/files/${redis_pkg_name}",
+      unless  => "/usr/bin/test -f ${redis_pkg}",
+      require => File[$redis_src_dir];
+
+    'unpack-redis':
+      command => "tar --strip-components 1 -xzf ${redis_pkg}",
+      cwd     => $redis_src_dir,
+      path    => '/bin:/usr/bin',
+      unless  => "test -f ${redis_src_dir}/Makefile",
+      require => Exec['get-redis-pkg'];
+
+   'install-redis':
+      command => "make && make install PREFIX=${redis_bin_dir}",
+      cwd     => $redis_src_dir,
+      path    => '/bin:/usr/bin',
+      unless  => "test $(${redis_bin_dir}/bin/redis-server --version | cut -d ' ' -f 1) = 'Redis'",
+      require => [ Exec['unpack-redis'], Class['gcc'] ],
   }
 
 }
